@@ -6,7 +6,7 @@ st.title("Fuel Efficiency Analytics")
 
 # DATABASE CONNECTION
 engine = create_engine(
-    "postgresql+psycopg2://postgres:1234@localhost/fuel_dss"
+    "DATABASE_URL"
 )
 
 # LOAD DATA
