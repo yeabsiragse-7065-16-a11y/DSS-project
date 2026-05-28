@@ -88,16 +88,16 @@ selected = option_menu(
 # ---------------------------------
 
 if selected == "Dashboard":
-    exec(open("pages/Dashboard.py").read())
+    exec(open("Dashboard.py").read())
 
 elif selected == "Prediction":
-    exec(open("pages/Prediction.py").read())
+    exec(open("Prediction.py").read())
 
 elif selected == "Analytics":
-    exec(open("pages/Analytics.py").read())
+    exec(open("Analytics.py").read())
 
 elif selected == "Alerts":
-    exec(open("pages/Alerts.py").read())
+    exec(open("Alerts.py").read())
 
 
 # ---------------------------------
