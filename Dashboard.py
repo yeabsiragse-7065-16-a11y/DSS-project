@@ -3,8 +3,14 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 # DATABASE CONNECTION
+import os
+from sqlalchemy import create_engine
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 engine = create_engine(
-    "postgresql+psycopg2://postgres:1234@localhost/fuel_dss"
+    DATABASE_URL,
+    connect_args={"sslmode": "require"}
 )
 
 # LOAD DATA
