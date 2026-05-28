@@ -11,7 +11,7 @@ import joblib
 # DATABASE CONNECTION
 # ==========================================
 
-DATABASE_URL = "postgresql://postgres:1234@localhost/fuel_dss"
+DATABASE_URL = "DATABASE_URL"
 
 engine = create_engine(DATABASE_URL)
 
