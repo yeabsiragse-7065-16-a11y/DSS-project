@@ -3,18 +3,24 @@ import pandas as pd
 from sqlalchemy import create_engine
 import os
 from sqlalchemy import create_engine
-
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL:
-    engine = create_engine(
-        DATABASE_URL,
-        connect_args={"sslmode": "require"}
-    )
-else:
-    engine = create_engine(
-        "postgresql://postgres:1234@localhost:5432/fuel_dss"
-    )
+if not DATABASE_URL:
+    st.error("DATABASE_URL environment variable not set in Render!")
+    st.stop()
+
+engine = create_engine(DATABASE_URL, connect_args={"sslmode": "require"})
+#DATABASE_URL = os.getenv("DATABASE_URL")
+
+#if DATABASE_URL:
+  #  engine = create_engine(
+  #      DATABASE_URL,
+  #      connect_args={"sslmode": "require"}
+ #   )
+#else:
+  #  engine = create_engine(
+  #      "postgresql://postgres:1234@localhost:5432/fuel_dss"
+ #   )
 # LOAD DATA
 operational_query = """
 SELECT *
