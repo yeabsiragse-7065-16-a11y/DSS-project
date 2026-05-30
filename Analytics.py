@@ -4,6 +4,14 @@ from sqlalchemy import create_engine
 import os
 from sqlalchemy import create_engine
 
+st.header("Vehicle Performance Analytics")
+
+st.page_link(
+        "pages/Vehicle_Performance.py",
+        label=" Vehicle Performance"
+    )
+  
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
