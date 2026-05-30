@@ -6,11 +6,8 @@ from sqlalchemy import create_engine
 
 st.header("Vehicle Performance Analytics")
 
-st.page_link(
-        "pages/Vehicle_Performance.py",
-        label=" Vehicle Performance"
-    )
-  
+if st.button("Vehicle Performance Analysis"):
+    st.switch_page("pages/Vehicle_Performance.py")  
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
