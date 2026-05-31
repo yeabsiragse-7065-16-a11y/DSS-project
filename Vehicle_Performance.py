@@ -5,7 +5,15 @@ from sqlalchemy import create_engine
 engine = create_engine(
     "postgresql://postgres:1234@localhost/fuel_dss"
 )
-
+st.markdown("""
+<style>
+    background: linear-gradient(
+        135deg,
+        #F8FAFC,
+        #EEF5FF
+    );
+</style>
+""", unsafe_allow_html=True)
 st.title("Vehicle Performance")
 col1, col2, col3 = st.columns(3)
 

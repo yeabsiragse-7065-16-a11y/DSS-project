@@ -102,111 +102,110 @@ with col3:
 # -----------------------------
 # HIGH CONSUMPTION ALERTS
 # -----------------------------
+col1, col2 = st.columns(2)
+with col1:
+  
 
-st.subheader("High Fuel Consumption Vehicles")
+    if len(high_consumption) > 0:
 
-if len(high_consumption) > 0:
+        st.error(
+            "Vehicles operating below efficiency threshold detected."
+        )
 
-    st.error(
-        "Vehicles operating below efficiency threshold detected."
-    )
-
-    st.dataframe(
-        high_consumption[
-            [
-                "vehicle_id",
-                "route_id",
-                "fuel_efficiency",
-                "vehicle_age"
+        st.dataframe(
+            high_consumption[
+                [
+                    "vehicle_id",
+                    "route_id",
+                    "fuel_efficiency",
+                    "vehicle_age"
+                ]
             ]
-        ]
-    )
+        )
 
-else:
+    else:
 
-    st.success(
-        "No major high-consumption anomalies detected."
-    )
+        st.success(
+            "No major high-consumption anomalies detected."
+        )
 
-# -----------------------------
-# OLD VEHICLE ALERTS
-# -----------------------------
+    # -----------------------------
+    # OLD VEHICLE ALERTS
+    # -----------------------------
+with col2:
+   
+    if len(old_vehicle_alert) > 0:
 
-st.subheader("Old Vehicle Operational Risk")
+        st.warning(
+            "Older vehicles with poor efficiency detected."
+        )
 
-if len(old_vehicle_alert) > 0:
-
-    st.warning(
-        "Older vehicles with poor efficiency detected."
-    )
-
-    st.dataframe(
-        old_vehicle_alert[
-            [
-                "vehicle_id",
-                "route_id",
-                "vehicle_age",
-                "fuel_efficiency"
+        st.dataframe(
+            old_vehicle_alert[
+                [
+                    "vehicle_id",
+                    "route_id",
+                    "vehicle_age",
+                    "fuel_efficiency"
+                ]
             ]
-        ]
-    )
+        )
 
-else:
+    else:
 
-    st.success(
-        "No old vehicle efficiency risks detected."
-    )
+        st.success(
+            "No old vehicle efficiency risks detected."
+        )
+with col1:
+    # -----------------------------
+    # EXCELLENT PERFORMANCE
+    # -----------------------------
 
-# -----------------------------
-# EXCELLENT PERFORMANCE
-# -----------------------------
+  
+    if len(excellent_efficiency) > 0:
 
-st.subheader("Top Efficient Vehicles")
+        st.success(
+            "Highly efficient operational records identified."
+        )
 
-if len(excellent_efficiency) > 0:
-
-    st.success(
-        "Highly efficient operational records identified."
-    )
-
-    st.dataframe(
-        excellent_efficiency[
-            [
-                "vehicle_id",
-                "route_id",
-                "fuel_efficiency"
+        st.dataframe(
+            excellent_efficiency[
+                [
+                    "vehicle_id",
+                    "route_id",
+                    "fuel_efficiency"
+                ]
             ]
-        ]
-    )
+        )
 
-# -----------------------------
-# DSS RECOMMENDATIONS
-# -----------------------------
+    # -----------------------------
+    # DSS RECOMMENDATIONS
+    # -----------------------------
 
-st.subheader("Operational Recommendations")
+    st.subheader("Operational Recommendations")
 
-if len(high_consumption) > 50:
+    if len(high_consumption) > 50:
 
-    st.error(
-        """
-        Large number of inefficient operations detected.
-        Recommend managerial review and maintenance inspection.
-        """
-    )
+        st.error(
+            """
+            Large number of inefficient operations detected.
+            Recommend managerial review and maintenance inspection.
+            """
+        )
 
-elif len(high_consumption) > 20:
+    elif len(high_consumption) > 20:
 
-    st.warning(
-        """
-        Moderate abnormal fuel consumption observed.
-        Monitor route and vehicle performance closely.
-        """
-    )
+        st.warning(
+            """
+            Moderate abnormal fuel consumption observed.
+            Monitor route and vehicle performance closely.
+            """
+        )
 
-else:
+    else:
 
-    st.success(
-        """
-        Fuel usage patterns are generally stable.
-        """
-    )
+        st.success(
+            """
+            Fuel usage patterns are generally stable.
+            """
+        )

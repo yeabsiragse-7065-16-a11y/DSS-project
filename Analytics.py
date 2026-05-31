@@ -1,148 +1,541 @@
 import streamlit as st
 import pandas as pd
+
 from sqlalchemy import create_engine
-import os
+from io import BytesIO
 from sqlalchemy import create_engine
 
-st.header("Vehicle Performance Analytics")
-
-if st.button("Vehicle Performance Analysis"):
-    st.switch_page("Vehicle_Performance.py")  
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if DATABASE_URL:
-    engine = create_engine(
-        DATABASE_URL,
-        connect_args={"sslmode": "require"}
-    )
-else:
-    engine = create_engine(
-        "postgresql://postgres:1234@localhost:5432/fuel_dss"
-    )
-# LOAD DATA
-query = """
-SELECT
-    o.vehicle_id,
-    o.route_id,
-    o.total_distance,
-    o.fuel_efficiency,
-    v.vehicle_age
-FROM operational_record o
-JOIN vehicle v
-    ON o.vehicle_id = v.vehicle_id
-    WHERE v.vehicle_age IS NOT NULL
-"""
-
-df = pd.read_sql(query, engine)
-
-#PERFORMANCE CLASSIFICATION
-
-def classify_performance(efficiency):
-
-    if efficiency >= 4:
-        return "Efficient"
-
-    elif efficiency >= 2:
-        return "Moderate"
-
-    else:
-        return "Poor"
-
-df["performance"] = df[
-    "fuel_efficiency"
-].apply(classify_performance)
-
-#VEHICLE PERFORMANCE TABLE
-
-vehicle_performance = df.groupby(
-    "vehicle_id"
-)["fuel_efficiency"].mean().reset_index()
-
-vehicle_performance = vehicle_performance.sort_values(
-    by="fuel_efficiency",
-    ascending=False
+engine = create_engine(
+    "postgresql://postgres:1234@localhost/fuel_dss"
+)
+analysis_option = st.radio(
+    "Select Analysis Type",
+    [
+        "Reports",
+        "Vehicle Performance"
+    ],
+    horizontal=True
 )
 
-st.subheader("Vehicle Performance Ranking")
 
-st.dataframe(vehicle_performance)
+if analysis_option == "Reports":
 
-#BEST & WORST VEHICLES
+    # reports code here
 
-best_vehicle = vehicle_performance.iloc[0]
+        st.title("Operational Reports")
 
-worst_vehicle = vehicle_performance.iloc[-1]
+        st.write(
+            "Generate fuel management reports for a selected period."
+        )
 
-col1, col2 = st.columns(2)
+        #Date Range Inputs
+        col1, col2 = st.columns(2)
 
-with col1:
-    st.success(
-        f"Best Vehicle: {best_vehicle['vehicle_id']}"
-    )
+        with col1:
+            start_date = st.date_input(
+                "Start Date"
+            )
 
-with col2:
-    st.error(
-        f"Worst Vehicle: {worst_vehicle['vehicle_id']}"
-    )
+        with col2:
+            end_date = st.date_input(
+                "End Date"
+            )
 
-#ROUTE EFFICIENCY ANALYSIS
+        if st.button("Generate Report"):
+            query = f"""
+            SELECT *
+            FROM operational_record
+            WHERE DATE(operational_date)
+            BETWEEN '{start_date}'
+            AND '{end_date}'
+            """
+            df = pd.read_sql(query, engine)
+            query = f"""
+            SELECT *
+            FROM fuel_record
+            WHERE DATE(refuel_date)
+            BETWEEN '{start_date}'
+            AND '{end_date}'
+            """
+            refuel_df = pd.read_sql(query, engine)
+            
+            if df.empty:
 
-route_analysis = df.groupby(
-    "route_id"
-)["fuel_efficiency"].mean().reset_index()
+                st.error(
+                "No records found for selected period."
+            )
 
-st.subheader("Route Efficiency")
+            else:
+                total_distance = df["total_distance"].sum()
+                total_trips = df["trip_count"].sum()
+                avg_efficiency = df["fuel_efficiency"].mean()    
+                total_fuel = refuel_df["refuel_liter"].sum()
 
-st.bar_chart(
-    route_analysis.set_index("route_id")
-)
+                col1, col2, col3, col4 = st.columns(4)
 
-#AGE VS EFFICIENCY
+                with col1:
+                    st.metric(
+                    "Fuel Consumed",
+                    f"{total_fuel:,.0f} L"
+                )
+
+                with col2:
+                    st.metric(
+                    "Distance",
+                    f"{total_distance:,.0f} km"
+                )
+
+                with col3:
+                    st.metric(
+                    "Trips",
+                    f"{total_trips:,.0f}"
+                )
+
+                with col4:
+                    st.metric(
+                    "Avg Efficiency",
+                    f"{avg_efficiency:.2f} km/L"
+                )
+            #Vehicle Ranking Report
+                vehicle_report = (
+                df.groupby("vehicle_id")
+                .agg({
+                "fuel_efficiency":"mean",
+                "total_distance":"sum",
+                "trip_count":"sum"
+                })
+                .reset_index()
+                )
+                vehicle_report = vehicle_report.sort_values(
+                by="fuel_efficiency",
+                ascending=False
+                )
+                st.subheader("Vehicle Performance Ranking")
+
+                st.dataframe(
+                vehicle_report,
+                use_container_width=True
+                )
+        #Route Ranking Report
+                route_report = (
+                    df.groupby("route_id")
+                    .agg({
+                    "fuel_efficiency":"mean",
+                    "total_distance":"sum"
+                    })
+                    .reset_index()
+                )
+                route_report = route_report.sort_values(
+                    by="fuel_efficiency",
+                    ascending=False
+                )
+                st.subheader("Route Performance Ranking")
+
+                st.dataframe(
+                route_report,
+                use_container_width=True
+            )
+        #Alert Summary
+                alerts_df = df[
+                    df["fuel_efficiency"] < 2.5
+                ]
+                st.subheader("Alert Summary")
+                st.metric(
+                "Vehicles Requiring Attention",
+                alerts_df["vehicle_id"].nunique()
+                )
+                st.dataframe(
+                alerts_df[
+                    [
+                        "vehicle_id",
+                        "route_id",
+                        "fuel_efficiency"
+                    ]
+                ]
+            )
+
+                st.write("Vehicle Records:", len(vehicle_report))
+                st.write("Route Records:", len(route_report))
+                st.write("Alert Records:", len(alerts_df))
+        # ---------------------------------
+        # EXCEL EXPORT
+        # ---------------------------------
+                summary_df = pd.DataFrame({
+                "Metric": [
+                "Total Fuel Consumed",
+                "Total Distance",
+                "Total Trips",
+                "Average Fuel Efficiency"
+            ],
+                "Value": [
+                total_fuel,
+                total_distance,
+                total_trips,
+                round(avg_efficiency, 2)
+            ]
+        })
+                output = BytesIO()
+
+                with pd.ExcelWriter(
+                    output,
+                    engine="openpyxl"
+                ) as writer:
+                    
+                    vehicle_report.to_excel(
+                    writer,
+                    sheet_name="Vehicles",
+                    index=False
+                )
+                    route_report.to_excel(
+                    writer,
+                    sheet_name="Routes",
+                    index=False
+                )
+
+                    alerts_df.to_excel(
+                    writer,
+                    sheet_name="Alerts",
+                    index=False
+                )
+
+        # Move outside the writer block
+                excel_data = output.getvalue()
+
+                st.download_button(
+                label="Download Excel Report",
+                data=excel_data,
+                file_name="fuel_management_report.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
 
-age_analysis = df.groupby(
-    "vehicle_age"
-)["fuel_efficiency"].mean().reset_index()
+elif analysis_option == "Vehicle Performance":
 
-st.subheader("Efficiency By Vehicle Age")
+    # vehicle analysis code here
+            
+        st.title("Vehicle Performance")
+        col1, col2, col3 = st.columns(3)
 
-st.bar_chart(
-    age_analysis.set_index("vehicle_age")
-)
+        with col1:
+            vehicle_id = st.number_input(
+            "Enter Vehicle ID",
+            min_value=0
 
-#PERFORMANCE DISTRIBUTION
+        )
+            
+        # -----------------------------
+        # AUTO GENERATED DATA
+        # -----------------------------
 
-performance_counts = df[
-    "performance"
-].value_counts()
+        vehicle_query = f"""
+        SELECT 
+            vehicle_model,
+            vehicle_age
+        FROM vehicle
+        WHERE vehicle_id = {vehicle_id}
+        """
 
-st.subheader("Performance Categories")
+        vehicle_df = pd.read_sql(vehicle_query, engine)
 
-st.bar_chart(performance_counts)
 
-#DSS INSIGHTS
+        if not vehicle_df.empty:
 
-st.subheader("Operational Insights")
+            vehicle_model = vehicle_df.iloc[0]["vehicle_model"]
+            vehicle_age = vehicle_df.iloc[0]["vehicle_age"]
 
-avg_efficiency = df[
-    "fuel_efficiency"
-].mean()
+            with col2:
+                st.metric(
+                    "Vehicle Model",
+                    vehicle_model
+                )
 
-if avg_efficiency < 2:
+            with col3:
+                st.metric(
+                    "Vehicle Age",
+                    vehicle_age
+                )
 
-    st.error(
-        "Overall fleet efficiency is below expected levels."
-    )
+        else:
 
-elif avg_efficiency < 4:
+            with col2:
+                st.metric(
+                    "Vehicle Model",
+                    "-"
+                )
 
-    st.warning(
-        "Fleet performance is moderate."
-    )
+            with col3:
+                st.metric(
+                    "Vehicle Age",
+                    "-"
+                )
+        
+        if st.button("Analyze Vehicle"):
 
-else:
+            query = f"""
+            SELECT
+                vehicle_id,
+                AVG(fuel_efficiency) AS avg_efficiency,
+                SUM(total_distance) AS total_distance,
+                SUM(trip_count) AS total_trips
+            FROM operational_record
+            WHERE vehicle_id = {vehicle_id}
+            GROUP BY vehicle_id
+            """
+            df = pd.read_sql(query, engine)
+        
+            route_query = f"""
+            SELECT
+                route_id,
+                AVG(fuel_efficiency) AS avg_efficiency
+            FROM operational_record
+            WHERE vehicle_id = {vehicle_id}
+            GROUP BY route_id
+            ORDER BY avg_efficiency DESC
+            """
+            route_df = pd.read_sql(route_query, engine)
+            
+            refuel_query = f"""
+        SELECT
+                vehicle_id,
+                SUM(refuel_liter) AS fuel_used
+            FROM fuel_record
+            WHERE vehicle_id = {vehicle_id}
+            GROUP BY vehicle_id
+                """
+            refuel_df = pd.read_sql(refuel_query, engine)
 
-    st.success(
-        "Fleet efficiency is operating within expected range."
-    )
+            
+            col1, col2, col3, col4, col5, col6 = st.columns(6)
+        
+            if not df.empty:
+
+                efficiency = df["avg_efficiency"][0]
+                with col4:
+                    st.metric(
+                    "Average Fuel Efficiency",
+                    f"{efficiency:.2f}"
+                )
+                with col1:
+                    st.metric(
+                    "Total Distance",
+                    f"{df['total_distance'][0]:,.0f} km"
+                )
+                with col2:
+                    st.metric(
+                    "Total Trips",
+                    int(df["total_trips"][0])
+                )
+                with col3:
+                    st.metric(
+                    "Total Fuel Consumed",
+                    f"{refuel_df["fuel_used"][0]:,.0f} L"
+                )    
+                with col5:
+                    if not route_df.empty:
+
+                        best_route = route_df.iloc[0]["route_id"]
+                        best_route_efficiency = (
+                        route_df.iloc[0]["avg_efficiency"]
+                        )
+                        st.metric(
+                            "Most Efficient Route",
+                            int(best_route)
+                            )
+
+                with col6:
+                    if efficiency >= 4:
+                        st.success(
+                        "Efficient Vehicle"
+                    )
+                    elif efficiency >= 2.5:
+
+                        st.warning(
+                        "Moderate Efficiency"
+                    )
+                    else:
+
+                        st.error(
+                        "Poor Efficiency"
+                    )
+            else:
+
+                st.error(
+                    "Vehicle not found."
+                )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

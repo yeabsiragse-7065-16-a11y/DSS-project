@@ -40,48 +40,32 @@ st.markdown("""
 <style>
 
 .kpi-card {
-    background-color: #ffffff;
-    padding: 20px;
+    background-color: white;    
+    padding: 15px;
     border-radius: 15px;
-    border-left: 6px solid #1f4e79;
+    border-left: 6px solid #ADD8E6;
     box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .kpi-title {
     font-size: 18px;
-    color: gray;
+    color: black;
     margin-bottom: 10px;
 }
 
 .kpi-value {
-    font-size: 32px;
+    font-size: 24px;
     font-weight: bold;
     color: #1f4e79;
 }
-
-.kpi-value1 {
-    font-size: 32px;
-    font-weight: bold;
-    color: #FF0000;
-}  
-
-.kpi-value2 {
-    font-size: 32px;
-    font-weight: bold;
-    color: #00FF00;
-}                       
+                      
 </style>
 """, unsafe_allow_html=True)
 
 # KPIs
 total_vehicle = int(df["vehicle_id"].nunique())
-
-avg_efficiency = round(
-    df["fuel_efficiency"].mean(),
-    2
-)
 
 total_distance = round(
     df["total_distance"].sum(),
@@ -93,35 +77,8 @@ total_fuel_used = round(
     2
 )
 total_records = len(df)
-best_vehicle = (
-    df.groupby("vehicle_id")[
-        "fuel_efficiency"
-    ]
-    .mean()
-    .idxmax()
-)
-worst_vehicle = (
-    df.groupby("vehicle_id")[
-        "fuel_efficiency"
-    ]
-    .mean()
-    .idxmin()
-)
-best_route = (
-    df.groupby("route_id")[
-        "fuel_efficiency"
-    ]
-    .mean()
-    .idxmax()
-)
-worst_route = (
-    df.groupby("route_id")[
-        "fuel_efficiency"
-    ]
-    .mean()
-    .idxmin()
-)
-st.set_page_config(layout="wide")
+
+#st.set_page_config(layout="wide")
 # KPI CARDS 1
 col1, col2, col3, col4 = st.columns(4)
 
@@ -130,7 +87,7 @@ with col1:
     <div class="kpi-card">
         <div class="kpi-title">Operational Records</div>
         <div class="kpi-value">
-            {total_records}
+            {total_records:,}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -139,7 +96,7 @@ with col2:
     <div class="kpi-card">
         <div class="kpi-title">Total Vehicle</div>
         <div class="kpi-value">
-            {total_vehicle}
+            {total_vehicle:,}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -147,9 +104,9 @@ with col2:
 with col3:
     st.markdown(f"""
     <div class="kpi-card">
-        <div class="kpi-title">Total Distance</div>
+        <div class="kpi-title">Total Distance(km)</div>
         <div class="kpi-value">
-            {total_distance}
+            {total_distance:,}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -158,75 +115,38 @@ with col4:
     <div class="kpi-card">
         <div class="kpi-title">Total Fuel Used (Liters)</div>
         <div class="kpi-value">
-            {total_fuel_used}
+            {total_fuel_used:,}
         </div>
     </div>
     """, unsafe_allow_html=True)
 st.markdown("---")
 # KPI CARDS 2
+col1, col2= st.columns([1.5,1.5])
 
-col5, col6, col7 = st.columns(3)
-
-with col5:
-        st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Average Fuel Efficiency</div>
-        <div class="kpi-value">
-            {avg_efficiency}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-with col6:
-            st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Best Vehicle</div>
-        <div class="kpi-value2">
-            {best_vehicle}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-with col7:
-            st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Worst Vehicle</div>
-        <div class="kpi-value1">
-            {worst_vehicle}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-st.markdown("---")
-# KPI CARDS 3
-
-col8, col9 = st.columns(2)
-
-with col8:
-            st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Efficient Route</div>
-        <div class="kpi-value2">
-            {best_route}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-with col9:
-            st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Inefficient Route</div>
-        <div class="kpi-value1">
-            {worst_route}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-
-st.divider()
 
 # RECENT RECORDS
+with col1:
+      
+        st.header("Recent Operational Records")
+        st.dataframe(df.head(20))
+with col2:
+        trend_query = """
+        SELECT
+            operational_date,
+            AVG(fuel_efficiency) AS avg_efficiency
+        FROM operational_record
+        GROUP BY operational_date
+        ORDER BY operational_date
+        """
 
-st.subheader("Recent Operational Records")
+        trend_df = pd.read_sql(
+            trend_query,
+            engine
+        )
 
-st.dataframe(df.head(20))
+        st.subheader("Fuel Efficiency Trend")
+        st.line_chart(
+            trend_df.set_index("operational_date")
+        )
+        
 
